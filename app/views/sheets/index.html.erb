@@ -1,0 +1,153 @@
+<% content_for :title, "Workspace — Sheetflow" %>
+<% content_for :body_class, "page-workspace" %>
+
+<%= tag.section class: "workspace", data: {
+      controller: "sheet-filter",
+      sheet_filter_rows_value: @all_users,
+      sheet_filter_columns_value: @columns,
+      sheet_filter_labels_value: @column_labels,
+      sheet_filter_per_page_value: @per_page,
+      sheet_filter_sort_value: params[:sort],
+      sheet_filter_direction_value: params[:direction].presence || "asc",
+      sheet_filter_page_value: @page
+    } do %>
+  <div class="workspace__intro">
+    <div>
+      <p class="eyebrow"><span class="eyebrow__dot"></span> Workspace</p>
+      <h1>Sheet intelligence</h1>
+      <p class="lede">Filter and sort instantly in your browser. Google Sheet sync stays cached in the background.</p>
+    </div>
+
+    <div class="workspace__stats">
+      <div class="stat">
+        <span class="stat__value" data-sheet-filter-target="count"><%= @total_count %></span>
+        <span class="stat__label">matching rows</span>
+      </div>
+      <div class="stat">
+        <span class="stat__value" data-sheet-filter-target="pageLabel"><%= @page %><span class="stat__slash">/</span><%= @total_pages %></span>
+        <span class="stat__label">page</span>
+      </div>
+    </div>
+  </div>
+
+  <form class="filters" data-action="submit->sheet-filter#filter:prevent">
+    <div class="filters__glow" aria-hidden="true"></div>
+    <div class="filters__row">
+      <div class="field field--grow">
+        <label for="query">Search</label>
+        <input
+          type="search"
+          id="query"
+          name="query"
+          class="input"
+          placeholder="Name, email, company, job title…"
+          autocomplete="off"
+          value="<%= params[:query] %>"
+          data-sheet-filter-target="query"
+          data-action="input->sheet-filter#search"
+        >
+      </div>
+
+      <div class="field">
+        <label for="country">Country</label>
+        <select id="country" name="country" class="input" data-sheet-filter-target="country" data-action="change->sheet-filter#filter">
+          <option value="">All countries</option>
+          <% @countries.each do |country| %>
+            <option value="<%= country %>" <%= "selected" if params[:country] == country %>><%= country %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="input" data-sheet-filter-target="status" data-action="change->sheet-filter#filter">
+          <option value="">All statuses</option>
+          <% @statuses.each do |status| %>
+            <option value="<%= status %>" <%= "selected" if params[:status] == status %>><%= status %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <div class="filters__actions">
+        <button type="button" class="btn btn--ghost" data-action="sheet-filter#reset">Reset</button>
+        <%= link_to "Refresh data", sheets_path(refresh: 1), class: "btn btn--ghost", data: { turbo: false }, title: "Pull latest rows from Google Sheets" %>
+      </div>
+    </div>
+  </form>
+
+  <div class="toolbar">
+    <div class="toolbar__meta">
+      <span class="chip chip--muted" data-sheet-filter-target="chip">All <%= @total_count %> rows</span>
+    </div>
+
+    <%= form_with url: export_sheets_path, method: :post, local: true, data: { turbo: false } do %>
+      <input type="hidden" name="query" value="<%= params[:query] %>" data-sheet-filter-target="exportQuery">
+      <input type="hidden" name="country" value="<%= params[:country] %>" data-sheet-filter-target="exportCountry">
+      <input type="hidden" name="status" value="<%= params[:status] %>" data-sheet-filter-target="exportStatus">
+      <input type="hidden" name="sort" value="<%= params[:sort] %>" data-sheet-filter-target="exportSort">
+      <input type="hidden" name="direction" value="<%= params[:direction] %>" data-sheet-filter-target="exportDirection">
+      <%= submit_tag "Download CSV",
+            class: "btn btn--accent btn--shine",
+            data: { turbo_confirm: "Download the current filtered rows as a CSV file?" } %>
+    <% end %>
+  </div>
+
+  <div class="table-wrap" data-sheet-filter-target="tableWrap">
+    <table class="data-table data-table--wide">
+      <thead>
+        <tr>
+          <% @columns.each do |column| %>
+            <th>
+              <a
+                href="#"
+                class="sort-link"
+                data-action="sheet-filter#sort"
+                data-sheet-filter-column-param="<%= column %>"
+              >
+                <span data-sort-label="<%= column %>"><%= @column_labels[column] %></span>
+              </a>
+            </th>
+          <% end %>
+        </tr>
+      </thead>
+      <tbody data-sheet-filter-target="body">
+        <% @users.each do |user| %>
+          <tr>
+            <% @columns.each do |column| %>
+              <td class="<%= "mono" if %w[id age salary phone].include?(column) %>">
+                <% if column == "status" %>
+                  <span class="<%= status_badge_class(user[column]) %>">
+                    <%= user[column].presence || "—" %>
+                  </span>
+                <% else %>
+                  <%= format_cell(column, user[column]) %>
+                <% end %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="pagination" aria-label="Pagination" data-sheet-filter-target="pagination" <%= "hidden" if @total_pages <= 1 %>>
+    <% if @total_pages > 1 %>
+      <% if @page > 1 %>
+        <a href="#" class="pagination__link" data-action="sheet-filter#goToPage" data-sheet-filter-page-param="<%= @page - 1 %>">← Prev</a>
+      <% end %>
+      <% (1..@total_pages).each do |page| %>
+        <a href="#" class="pagination__link <%= "is-active" if page == @page %>" data-action="sheet-filter#goToPage" data-sheet-filter-page-param="<%= page %>"><%= page %></a>
+      <% end %>
+      <% if @page < @total_pages %>
+        <a href="#" class="pagination__link" data-action="sheet-filter#goToPage" data-sheet-filter-page-param="<%= @page + 1 %>">Next →</a>
+      <% end %>
+    <% end %>
+  </nav>
+
+  <div class="empty-state" data-sheet-filter-target="empty" <%= "hidden" if @users.any? %>>
+    <div class="empty-state__orb" aria-hidden="true"></div>
+    <h2>No matching rows</h2>
+    <p>Adjust search, clear a filter, or reset to stream the full sheet again.</p>
+    <button type="button" class="btn btn--primary btn--shine" data-action="sheet-filter#reset">Clear filters</button>
+  </div>
+<% end %>

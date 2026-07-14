@@ -1,0 +1,58 @@
+<% content_for :title, "Sheetflow — Google Sheet Processor" %>
+<% content_for :body_class, "page-home" %>
+
+<section class="hero" data-controller="reveal tilt">
+  <div class="hero__content">
+    <p class="hero__brand reveal-item" data-reveal>Sheetflow</p>
+    <h1 class="hero__headline reveal-item" data-reveal>
+      Filter live sheets.<br>
+      <span class="hero__headline-accent">Download clarity.</span>
+    </h1>
+    <p class="hero__lede reveal-item" data-reveal>
+      Connect Google, refine employee data in seconds, and export a polished CSV —
+      a calm, high-speed studio for spreadsheet workflows.
+    </p>
+
+    <div class="hero__actions reveal-item" data-reveal>
+      <% if current_user %>
+        <%= link_to "Enter workspace", sheets_path, class: "btn btn--primary btn--lg btn--shine", data: { turbo_prefetch: true } %>
+      <% else %>
+        <%= link_to "Continue with Google", login_path, class: "btn btn--primary btn--lg btn--shine", data: { turbo: false } %>
+      <% end %>
+      <span class="hero__meta">Secure OAuth · Live Sheets · Local CSV</span>
+    </div>
+  </div>
+
+  <div class="hero__visual reveal-item" data-reveal>
+    <div class="sheet-preview" data-tilt-target="card">
+      <div class="sheet-preview__glare" aria-hidden="true"></div>
+      <div class="sheet-preview__scan" aria-hidden="true"></div>
+      <div class="sheet-preview__bar">
+        <span></span><span></span><span></span>
+        <p class="sheet-preview__title">live pipeline</p>
+        <span class="sheet-preview__live">SYNCED</span>
+      </div>
+      <div class="sheet-preview__grid">
+        <div class="sheet-preview__cell sheet-preview__cell--head">ID</div>
+        <div class="sheet-preview__cell sheet-preview__cell--head">Name</div>
+        <div class="sheet-preview__cell sheet-preview__cell--head">Status</div>
+
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:1">1001</div>
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:1">Ali Khan</div>
+        <div class="sheet-preview__cell sheet-preview__row sheet-preview__cell--live" style="--i:1">Active</div>
+
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:2">1012</div>
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:2">Emma Johnson</div>
+        <div class="sheet-preview__cell sheet-preview__row sheet-preview__cell--live" style="--i:2">Active</div>
+
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:3">1014</div>
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:3">Olivia Brown</div>
+        <div class="sheet-preview__cell sheet-preview__row sheet-preview__cell--mute" style="--i:3">Inactive</div>
+
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:4">1008</div>
+        <div class="sheet-preview__cell sheet-preview__row" style="--i:4">Hira Shah</div>
+        <div class="sheet-preview__cell sheet-preview__row sheet-preview__cell--wait" style="--i:4">Pending</div>
+      </div>
+    </div>
+  </div>
+</section>

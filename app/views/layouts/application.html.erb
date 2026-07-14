@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title><%= content_for(:title) || "Sheetflow — Google Sheet Processor" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= yield :head %>
+
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Sora:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="<%= content_for?(:body_class) ? yield(:body_class) : 'page-default' %>" data-controller="loading">
+    <div class="fx-layer" aria-hidden="true">
+      <div class="fx-aurora fx-aurora--a"></div>
+      <div class="fx-aurora fx-aurora--b"></div>
+      <div class="fx-grid"></div>
+      <div class="fx-noise"></div>
+    </div>
+
+    <div class="app-shell">
+      <header class="site-header" data-controller="header">
+        <div class="site-header__inner">
+          <%= link_to root_path, class: "brand" do %>
+            <span class="brand__mark" aria-hidden="true">
+              <span class="brand__pulse"></span>
+            </span>
+            <span class="brand__text">
+              <span class="brand__name">Sheetflow</span>
+              <span class="brand__tag">data studio</span>
+            </span>
+          <% end %>
+
+          <nav class="site-nav" aria-label="Primary">
+            <% if current_user %>
+              <%= link_to "Workspace", sheets_path, class: "site-nav__link", data: { turbo_prefetch: true } %>
+              <span class="site-nav__pill">
+                <span class="site-nav__dot" aria-hidden="true"></span>
+                <%= current_user.name.presence || current_user.email %>
+              </span>
+              <%= button_to "Sign out", logout_path, method: :delete, class: "btn btn--ghost btn--sm" %>
+            <% else %>
+              <%= link_to "Sign in", login_path, class: "btn btn--primary btn--sm btn--shine", data: { turbo: false } %>
+            <% end %>
+          </nav>
+        </div>
+      </header>
+
+      <% if notice.present? || alert.present? || flash[:export_url].present? %>
+        <div class="flash-stack">
+          <% if notice.present? %>
+            <div class="flash flash--notice" role="status">
+              <p><%= notice %></p>
+              <% if flash[:export_url].present? %>
+                <a href="<%= flash[:export_url] %>" target="_blank" rel="noopener" class="flash__action">Open new sheet →</a>
+              <% end %>
+            </div>
+          <% end %>
+          <% if alert.present? %>
+            <div class="flash flash--alert" role="alert">
+              <p><%= alert %></p>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+
+      <main class="page-main">
+        <%= yield %>
+      </main>
+    </div>
+  </body>
+</html>
