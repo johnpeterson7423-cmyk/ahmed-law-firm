@@ -1,27 +1,51 @@
 import { Controller } from "@hotwired/stimulus"
 
+// Animates a formatted number (eg. "$1,500,000") counting up from 0
+// to its final value once the element scrolls into view.
 export default class extends Controller {
-  static values = { duration: { type: Number, default: 1000 } }
+  static values = { duration: { type: Number, default: 1400 } }
 
   connect() {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-
-    const raw = this.element.textContent.trim()
-    const match = raw.match(/^(\d+)(.*)$/)
+    const match = this.element.textContent.trim().match(/^(\D*)([\d,]+)(\D*)$/)
     if (!match) return
 
-    const target = Number(match[1])
-    const suffix = match[2] || ""
-    const start = performance.now()
+    this.prefix = match[1]
+    this.suffix = match[3]
+    this.target = Number(match[2].replace(/,/g, ""))
 
-    const tick = (now) => {
-      const progress = Math.min((now - start) / this.durationValue, 1)
-      const eased = 1 - Math.pow(1 - progress, 3)
-      this.element.textContent = `${Math.round(target * eased)}${suffix}`
-      if (progress < 1) requestAnimationFrame(tick)
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+
+    this.played = false
+    this.render(0)
+
+    this.observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !this.played) {
+        this.played = true
+        requestAnimationFrame((now) => this.animate(now))
+        this.observer.disconnect()
+      }
+    }, { threshold: 0.4 })
+
+    this.observer.observe(this.element)
+  }
+
+  disconnect() {
+    this.observer?.disconnect()
+  }
+
+  animate(startTime) {
+    this.startTime ??= startTime
+    const progress = Math.min((startTime - this.startTime) / this.durationValue, 1)
+    const eased = 1 - Math.pow(1 - progress, 3)
+
+    this.render(Math.round(this.target * eased))
+
+    if (progress < 1) {
+      requestAnimationFrame((now) => this.animate(now))
     }
+  }
 
-    this.element.textContent = `0${suffix}`
-    requestAnimationFrame(tick)
+  render(value) {
+    this.element.textContent = `${this.prefix}${value.toLocaleString("en-US")}${this.suffix}`
   }
 }

@@ -31,7 +31,7 @@ class GoogleOauthController < ApplicationController
       session[:user_id] = user.id
   
   
-      redirect_to root_path,
+      redirect_to sheets_path,
                   notice: "Google connected successfully"
     end
   

@@ -5,15 +5,10 @@ class SheetsController < ApplicationController
 
   def index
     service = Google::SheetsService.new(current_user)
-    service.refresh! if params[:refresh].present?
 
     @columns = Google::SheetsService::HEADERS
-    @column_labels = Google::SheetsService::HEADER_LABELS
-    @all_users = service.users
     @countries = service.countries
     @statuses = service.statuses
-    @per_page = PER_PAGE
-
     @filtered_users = service.filter_users(
       query: params[:query],
       country: params[:country],

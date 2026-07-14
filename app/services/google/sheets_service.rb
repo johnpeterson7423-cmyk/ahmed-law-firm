@@ -4,10 +4,6 @@ module Google
   class SheetsService
     SPREADSHEET_ID = "1EOzM0w3MRkDhmhDIJpRkvDlfu2QC_UeWOCSkeAnhX0Y".freeze
     RANGE = "Sheet1!A:L".freeze
-    CACHE_TTL = 5.minutes
-
-    # Survives across requests even when Rails.cache is :null_store in development
-    STORE = ActiveSupport::Cache::MemoryStore.new
 
     HEADERS = %w[
       id name email phone country age gender company job_title salary status joining_date
@@ -32,25 +28,31 @@ module Google
       @user = user
     end
 
-    def users(force: false)
-      return @cached_users if defined?(@cached_users) && !force
+    def users
+      return @cached_users if defined?(@cached_users)
 
-      STORE.delete(cache_key) if force
+      rows = read_sheet
+      if rows.blank?
+        @cached_users = []
+        return @cached_users
+      end
 
-      @cached_users = STORE.fetch(cache_key, expires_in: CACHE_TTL) { fetch_users_from_google }
-    end
+      headers = rows.shift.map { |h| normalize_header(h) }
 
-    def refresh!
-      users(force: true)
+      @cached_users = rows.map do |row|
+        padded = row + Array.new([headers.size - row.size, 0].max, "")
+        headers.zip(padded.first(headers.size)).to_h
+      end
     end
 
     def filter_users(query: nil, country: nil, status: nil)
       result = users
 
       if query.present?
-        q = query.to_s.downcase.strip
+        q = query.to_s.strip
+        pattern = /\b#{Regexp.escape(q)}/i
         result = result.select do |row|
-          row.values.any? { |value| value.to_s.downcase.include?(q) }
+          row.values.any? { |value| value.to_s.match?(pattern) }
         end
       end
 
@@ -88,22 +90,6 @@ module Google
 
     attr_reader :user
 
-    def cache_key
-      "sheets:rows:#{SPREADSHEET_ID}:#{user.id}"
-    end
-
-    def fetch_users_from_google
-      rows = read_sheet
-      return [] if rows.blank?
-
-      headers = rows.shift.map { |h| normalize_header(h) }
-
-      rows.map do |row|
-        padded = row + Array.new([headers.size - row.size, 0].max, "")
-        headers.zip(padded.first(headers.size)).to_h
-      end
-    end
-
     def csv_escape(value)
       string = value.to_s
       if string.include?(",") || string.include?('"') || string.include?("\n") || string.include?("\r")
@@ -133,32 +119,11 @@ module Google
         client_id: ENV.fetch("GOOGLE_CLIENT_ID"),
         client_secret: ENV.fetch("GOOGLE_CLIENT_SECRET"),
         token_credential_uri: "https://oauth2.googleapis.com/token",
-        access_token: user.access_token,
-        refresh_token: user.refresh_token,
-        expires_at: user.token_expires_at
+        refresh_token: user.refresh_token
       )
 
-      if token_fresh?
-        return client
-      end
-
-      token = client.fetch_access_token!
-      expires_in = token["expires_in"].to_i
-      expires_in = 3500 if expires_in <= 0
-
-      user.update!(
-        access_token: token["access_token"],
-        token_expires_at: Time.current + expires_in.seconds
-      )
-
-      client.access_token = token["access_token"]
+      client.fetch_access_token!
       client
-    end
-
-    def token_fresh?
-      user.access_token.present? &&
-        user.token_expires_at.present? &&
-        user.token_expires_at > 1.minute.from_now
     end
   end
 end
