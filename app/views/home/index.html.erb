@@ -14,12 +14,13 @@
     </p>
 
     <div class="hero__actions anim-rise anim-rise--3">
-      <% if current_user %>
+      <% if current_user || demo_mode? %>
         <%= link_to "Enter workspace", sheets_path, class: "btn btn--primary btn--lg btn--glow" %>
       <% else %>
         <%= link_to "Continue with Google", login_path, class: "btn btn--primary btn--lg btn--glow" %>
+        <%= link_to "Try a demo with your own file", new_demo_path, class: "btn btn--ghost btn--lg" %>
       <% end %>
-      <span class="hero__meta">Secure OAuth · Live Sheets · Local CSV</span>
+      <span class="hero__meta">Secure OAuth · Live Sheets</span>
     </div>
   </div>
 

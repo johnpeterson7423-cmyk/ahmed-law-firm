@@ -58,4 +58,9 @@ end
 gem "dotenv-rails"
 gem "google-apis-oauth2_v2"
 gem "google-apis-sheets_v4"
+gem "google-apis-drive_v3"
 gem "googleauth"
+
+gem "roo", "~> 2.10"
+# roo requires csv but doesn't declare it; Ruby 3.4 dropped csv from default gems.
+gem "csv"

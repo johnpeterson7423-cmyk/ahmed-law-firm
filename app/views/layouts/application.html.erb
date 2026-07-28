@@ -52,6 +52,13 @@
                 <%= current_user.name.presence || current_user.email %>
               </span>
               <%= button_to "Sign out", logout_path, method: :delete, class: "btn btn--ghost btn--sm" %>
+            <% elsif demo_mode? %>
+              <%= link_to "Workspace", sheets_path, class: "site-nav__link" %>
+              <span class="site-nav__pill">
+                <span class="site-nav__dot" aria-hidden="true"></span>
+                Demo mode
+              </span>
+              <%= button_to "Exit demo", demo_path, method: :delete, class: "btn btn--ghost btn--sm" %>
             <% else %>
               <%= link_to "Sign in", login_path, class: "btn btn--primary btn--sm btn--glow" %>
             <% end %>

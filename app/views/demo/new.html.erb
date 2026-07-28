@@ -1,0 +1,34 @@
+<% content_for :title, "Try a demo — Ahmed Law Firm" %>
+<% content_for :body_class, "page-workspace" %>
+
+<section class="workspace">
+  <div class="workspace__intro">
+    <div class="anim-rise">
+      <p class="eyebrow"><span class="eyebrow__dot"></span> Demo mode</p>
+      <h1>Upload an Excel file</h1>
+      <p class="lede">No Google account? Upload an Excel (.xlsx) file of your client roster to explore search, filter, and sort. Nothing is uploaded to Google — the file stays local to this session.</p>
+    </div>
+  </div>
+
+  <div class="filters glass-card anim-rise anim-rise--1">
+    <%= form_with url: demo_path, method: :post, local: true, multipart: true, class: "filters__row" do %>
+      <div class="field field--grow">
+        <label for="file">Excel file</label>
+        <%= file_field_tag :file, id: "file", accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", class: "input", required: true %>
+      </div>
+
+      <div class="filters__actions">
+        <%= submit_tag "Load demo data", class: "btn btn--primary btn--glow" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="table-wrap glass-card anim-rise anim-rise--2">
+    <p class="lede" style="padding: 1rem;">
+      The first row should be a header row with these columns (any order, not case-sensitive):
+    </p>
+    <p class="lede mono" style="padding: 0 1rem 1rem;">
+      <%= RosterTable::HEADERS.join(", ") %>
+    </p>
+  </div>
+</section>

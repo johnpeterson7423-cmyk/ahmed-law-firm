@@ -5,9 +5,11 @@ Rails.application.routes.draw do
   get "/oauth2callback", to: "google_oauth#callback"
   delete "/logout", to: "sessions#destroy"
 
+  resource :demo, only: [:new, :create, :destroy], controller: "demo"
+
   resources :sheets, only: [:index] do
     collection do
-      post :export
+      get :document
     end
   end
 end

@@ -6,7 +6,13 @@
     <div class="anim-rise">
       <p class="eyebrow"><span class="eyebrow__dot"></span> Workspace</p>
       <h1>Firm records</h1>
-      <p class="lede">Search, filter, and sort your firm's live Google Sheet — then download a clean CSV of exactly what you need.</p>
+      <p class="lede">
+        <% if demo_mode? %>
+          Search, filter, and sort your uploaded demo spreadsheet.
+        <% else %>
+          Search, filter, and sort your firm's live Google Sheet.
+        <% end %>
+      </p>
     </div>
 
     <div class="workspace__stats anim-rise anim-rise--1">
@@ -27,16 +33,16 @@
         <label for="query">Search</label>
         <%= text_field_tag :query, params[:query],
               id: "query",
-              placeholder: "Name, email, company, job title…",
+              placeholder: "Client, phone, claim number…",
               class: "input" %>
       </div>
 
       <div class="field">
-        <label for="country">Country</label>
-        <%= select_tag :country,
-              options_for_select(@countries, params[:country]),
-              include_blank: "All countries",
-              id: "country",
+        <label for="insurance">Insurance</label>
+        <%= select_tag :insurance,
+              options_for_select(@insurances, params[:insurance]),
+              include_blank: "All insurers",
+              id: "insurance",
               class: "input" %>
       </div>
 
@@ -69,14 +75,6 @@
         <span class="chip chip--muted">All <%= @total_count %> rows</span>
       <% end %>
     </div>
-
-    <%= button_to "Download CSV",
-                  export_sheets_path,
-                  method: :post,
-                  params: filter_query_params,
-                  form: { data: { turbo: false } },
-                  class: "btn btn--accent btn--glow",
-                  data: { turbo_confirm: "Download #{@total_count} filtered row#{'s' unless @total_count == 1} as a CSV file?" } %>
   </div>
 
   <% if @users.any? %>
@@ -92,19 +90,33 @@
                 <% end %>
               </th>
             <% end %>
+            <% unless demo_mode? %>
+              <th>File</th>
+            <% end %>
           </tr>
         </thead>
         <tbody>
           <% @users.each_with_index do |user, index| %>
             <tr class="table-row" style="--row-i: <%= index %>">
               <% @columns.each do |column| %>
-                <td class="<%= "mono" if %w[id age salary phone].include?(column) %>">
-                  <% if column == "status" %>
+                <td class="<%= "mono" if %w[phone_number dol dob].include?(column) %>">
+                  <% if column == "treatment_status" %>
                     <span class="<%= status_badge_class(user[column]) %>">
                       <%= user[column].presence || "—" %>
                     </span>
                   <% else %>
                     <%= format_cell(column, user[column]) %>
+                  <% end %>
+                </td>
+              <% end %>
+              <% unless demo_mode? %>
+                <td>
+                  <% if user["clients"].present? %>
+                    <%= link_to "See File",
+                                document_sheets_path(client: user["clients"], dol: user["dol"]),
+                                class: "btn btn--ghost btn--sm" %>
+                  <% else %>
+                    <span class="chip chip--muted">—</span>
                   <% end %>
                 </td>
               <% end %>
@@ -120,10 +132,14 @@
           <%= link_to "← Prev", sheets_path(filter_query_params(page: @page - 1)), class: "pagination__link" %>
         <% end %>
 
-        <% (1..@total_pages).each do |page| %>
-          <%= link_to page,
-                      sheets_path(filter_query_params(page: page)),
-                      class: "pagination__link #{"is-active" if page == @page}" %>
+        <% pagination_items(@page, @total_pages).each do |page| %>
+          <% if page == :gap %>
+            <span class="pagination__gap">…</span>
+          <% else %>
+            <%= link_to page,
+                        sheets_path(filter_query_params(page: page)),
+                        class: "pagination__link #{"is-active" if page == @page}" %>
+          <% end %>
         <% end %>
 
         <% if @page < @total_pages %>

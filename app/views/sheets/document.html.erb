@@ -1,0 +1,44 @@
+<% content_for :title, "#{@document_name} — Ahmed Law Firm" %>
+<% content_for :body_class, "page-workspace" %>
+
+<section class="workspace">
+  <div class="workspace__intro">
+    <div class="anim-rise">
+      <p class="eyebrow"><span class="eyebrow__dot"></span> Case file</p>
+      <h1><%= @document_name %></h1>
+      <p class="lede">
+        <%= [@client, @dol].reject(&:blank?).join(" · ") %>
+        — read-only from Google Drive.
+      </p>
+    </div>
+  </div>
+
+  <div class="table-wrap glass-card anim-rise anim-rise--1">
+    <% if @mime_type.to_s.start_with?("text/") %>
+      <pre style="white-space: pre-wrap; word-break: break-word; margin: 0; padding: 1.5rem;"><%= @content %></pre>
+    <% elsif @mime_type == "application/pdf" %>
+      <embed src="data:application/pdf;base64,<%= Base64.strict_encode64(@content) %>"
+             type="application/pdf"
+             style="width: 100%; height: 85vh; border: 0;" />
+    <% elsif @mime_type.to_s.start_with?("image/") %>
+      <img src="data:<%= @mime_type %>;base64,<%= Base64.strict_encode64(@content) %>"
+           style="max-width: 100%; display: block;"
+           alt="<%= @document_name %>" />
+    <% else %>
+      <div style="padding: 1.5rem;">
+        <p>Preview isn't available for this file type (<%= @mime_type %>).</p>
+        <%= link_to "Download file",
+                    "data:#{@mime_type};base64,#{Base64.strict_encode64(@content)}",
+                    download: @document_name,
+                    class: "btn btn--primary" %>
+      </div>
+    <% end %>
+  </div>
+
+  <div class="toolbar anim-rise anim-rise--2">
+    <%= link_to "← Back to workspace", sheets_path, class: "btn btn--ghost" %>
+    <% if @web_view_link.present? %>
+      <%= link_to "Open in Google", @web_view_link, class: "btn btn--primary", target: "_blank", rel: "noopener" %>
+    <% end %>
+  </div>
+</section>

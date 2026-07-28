@@ -22,7 +22,7 @@ module SheetsHelper
   def filter_query_params(extra = {})
     {
       query: params[:query],
-      country: params[:country],
+      insurance: params[:insurance],
       status: params[:status],
       sort: params[:sort],
       direction: params[:direction]
@@ -30,7 +30,21 @@ module SheetsHelper
   end
 
   def active_filters?
-    params[:query].present? || params[:country].present? || params[:status].present?
+    params[:query].present? || params[:insurance].present? || params[:status].present?
+  end
+
+  # Windowed page list, e.g. [1, :gap, 4, 5, 6, 7, 8, :gap, 42]
+  def pagination_items(current, total, edge: 1, around: 2)
+    return (1..total).to_a if total <= (edge * 2) + (around * 2) + 3
+
+    pages = (1..total).select do |p|
+      p <= edge || p > total - edge || (p - current).abs <= around
+    end
+
+    pages.each_with_object([]) do |page, items|
+      items << :gap if items.last.is_a?(Integer) && page - items.last > 1
+      items << page
+    end
   end
 
   def status_badge_class(status)
@@ -44,13 +58,6 @@ module SheetsHelper
   def format_cell(column, value)
     return "" if value.blank?
 
-    case column
-    when "salary"
-      number_with_delimiter(value.to_s.gsub(/[^\d]/, "").to_i)
-    when "phone"
-      value.to_s
-    else
-      value.to_s
-    end
+    value.to_s
   end
 end

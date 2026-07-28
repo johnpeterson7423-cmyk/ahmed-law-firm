@@ -6,8 +6,8 @@ module Google
       "openid",
       "email",
       "profile",
-      "https://www.googleapis.com/auth/spreadsheets"
-
+      "https://www.googleapis.com/auth/spreadsheets.readonly",
+      "https://www.googleapis.com/auth/drive.readonly"
     ].freeze
 
     REDIRECT_URI = "http://localhost:3000/oauth2callback".freeze

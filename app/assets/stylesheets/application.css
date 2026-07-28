@@ -1060,6 +1060,16 @@ a {
   box-shadow: 0 8px 20px -6px var(--teal-glow);
 }
 
+.pagination__gap {
+  min-width: 2.2rem;
+  height: 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  color: var(--ink-soft);
+}
+
 .empty-state {
   text-align: center;
   padding: 3.5rem 1.5rem;
