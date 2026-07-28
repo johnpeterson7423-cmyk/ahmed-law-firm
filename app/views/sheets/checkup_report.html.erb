@@ -1,0 +1,195 @@
+<% content_for :title, "Checkup bot — Ahmed Law Firm" %>
+<% content_for :body_class, "page-workspace" %>
+
+<% running = @run&.running? %>
+<% if running %>
+  <meta http-equiv="refresh" content="4;url=<%= checkup_report_sheets_path(checkup_filter_params) %>">
+<% end %>
+
+<section class="workspace">
+  <div class="workspace__intro">
+    <div class="anim-rise">
+      <p class="eyebrow"><span class="eyebrow__dot"></span> Checkup bot</p>
+      <h1>Last checkup report</h1>
+      <p class="lede">
+        Runs in the background and saves each client’s last checkup date to the database.
+        Marks <strong>needs call</strong> when a found last checkup is 15+ days old.
+        Refresh this page to follow progress.
+      </p>
+    </div>
+
+    <% if @run %>
+      <div class="workspace__stats anim-rise anim-rise--1">
+        <div class="stat glass-card">
+          <span class="stat__value"><%= @run.scanned %><span class="stat__slash">/</span><%= @run.total %></span>
+          <span class="stat__label">scanned</span>
+        </div>
+        <div class="stat glass-card">
+          <span class="stat__value"><%= @run.found_count %></span>
+          <span class="stat__label">with date</span>
+        </div>
+        <div class="stat glass-card">
+          <span class="stat__value"><%= @run.not_found_count %></span>
+          <span class="stat__label">not found</span>
+        </div>
+        <div class="stat glass-card">
+          <span class="stat__value"><%= @run.checkup_results.where(needs_to_call: true).count %></span>
+          <span class="stat__label">needs call</span>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <%= form_with url: checkup_report_sheets_path,
+                method: :get,
+                local: true,
+                data: { turbo: false },
+                html: { class: "filters glass-card anim-rise anim-rise--2" } do %>
+    <div class="filters__row">
+      <div class="field">
+        <label for="needs_call">Needs call</label>
+        <%= select_tag :needs_call,
+              options_for_select(
+                [["All", ""], ["Yes", "yes"], ["No", "no"]],
+                params[:needs_call]
+              ),
+              id: "needs_call",
+              class: "input" %>
+      </div>
+
+      <div class="field">
+        <label for="status">Status</label>
+        <%= select_tag :status,
+              options_for_select(
+                [["All statuses", ""], ["Found", "found"], ["Not found", "not_found"]],
+                params[:status]
+              ),
+              id: "status",
+              class: "input" %>
+      </div>
+
+      <div class="filters__actions">
+        <%= submit_tag "Filter", class: "btn btn--ghost" %>
+      </div>
+    </div>
+  <% end %>
+
+  <%= form_with url: run_checkup_report_sheets_path,
+                method: :post,
+                local: true,
+                data: { turbo: false },
+                html: { class: "filters glass-card anim-rise anim-rise--2" } do %>
+    <%= hidden_field_tag :needs_call, params[:needs_call] if params[:needs_call].present? %>
+    <%= hidden_field_tag :status, params[:status] if params[:status].present? %>
+    <div class="filters__row">
+      <div class="field field--grow">
+        <label for="query">Search</label>
+        <%= text_field_tag :query, params[:query], id: "query", placeholder: "Client name…", class: "input" %>
+      </div>
+
+      <div class="field">
+        <label for="limit">Limit</label>
+        <%= number_field_tag :limit, @limit, id: "limit", min: 1, max: Google::CheckupReportService::MAX_LIMIT, class: "input" %>
+      </div>
+
+      <div class="filters__actions">
+        <%= submit_tag running ? "Bot running…" : "Run bot",
+              class: "btn btn--primary btn--glow",
+              disabled: running,
+              onclick: running ? nil : "return confirm('Start background scan and save results to the database?');" %>
+      </div>
+    </div>
+    <p class="lede" style="padding: 0 0 0.25rem; margin: 0;">
+      Eligible clients: <strong><%= @eligible_count %></strong>.
+      Results are stored in <span class="mono">checkup_runs</span> / <span class="mono">checkup_results</span>.
+    </p>
+  <% end %>
+
+  <div class="table-wrap glass-card anim-rise anim-rise--3" style="padding: 1.25rem;">
+    <% if @run %>
+      <p class="eyebrow" style="margin-bottom: 0.5rem;">
+        <span class="eyebrow__dot"></span>
+        Run #<%= @run.id %> · <%= @run.status %>
+        <% if running %> · auto-refresh on<% end %>
+      </p>
+
+      <% if @run.last_client.present? && running %>
+        <p class="lede">Last saved: <strong><%= @run.last_client %></strong></p>
+      <% end %>
+
+      <% if @run.error.present? %>
+        <p class="lede" style="color: var(--alert-text);"><%= @run.error %></p>
+      <% end %>
+
+      <% if @results.any? %>
+        <p class="lede" style="margin-bottom: 0.75rem;">
+          Showing <%= ((@page - 1) * @per_page) + 1 %>–<%= ((@page - 1) * @per_page) + @results.size %>
+          of <%= @results_total %> saved rows
+        </p>
+        <table class="data-table data-table--wide">
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>DOL</th>
+              <th>Last checkup</th>
+              <th>Needs call</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @results.each_with_index do |row, index| %>
+              <tr class="table-row" style="--row-i: <%= index %>">
+                <td><%= row.client.presence || "—" %></td>
+                <td class="mono"><%= row.dol.presence || "—" %></td>
+                <td class="mono"><%= row.last_checkup_date.presence || "—" %></td>
+                <td>
+                  <% if row.needs_to_call? %>
+                    <span class="badge badge--pending" title="Last checkup is 15+ days old">Yes</span>
+                  <% else %>
+                    <span class="badge badge--active">No</span>
+                  <% end %>
+                </td>
+                <td>
+                  <% if row.status == "found" %>
+                    <span class="badge badge--active">Found</span>
+                  <% else %>
+                    <span class="badge badge--inactive" title="<%= h(row.error.to_s) %>">Not found</span>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      <% elsif @run.checkup_results.exists? %>
+        <p class="lede">No rows match these filters.</p>
+      <% else %>
+        <p class="lede">Run created — waiting for the first database row…</p>
+      <% end %>
+    <% else %>
+      <h2>No runs yet</h2>
+      <p class="lede">Start the bot to create a background job and save checkup dates to the database.</p>
+    <% end %>
+  </div>
+
+  <% if @run && @total_pages > 1 %>
+    <nav class="pagination anim-rise anim-rise--4" aria-label="Results pagination">
+      <% if @page > 1 %>
+        <%= link_to "← Prev", checkup_report_sheets_path(checkup_filter_params(page: @page - 1)), class: "pagination__link" %>
+      <% end %>
+
+      <% pagination_items(@page, @total_pages).each do |page| %>
+        <% if page == :gap %>
+          <span class="pagination__gap">…</span>
+        <% else %>
+          <%= link_to page,
+                      checkup_report_sheets_path(checkup_filter_params(page: page)),
+                      class: "pagination__link #{"is-active" if page == @page}" %>
+        <% end %>
+      <% end %>
+
+      <% if @page < @total_pages %>
+        <%= link_to "Next →", checkup_report_sheets_path(checkup_filter_params(page: @page + 1)), class: "pagination__link" %>
+      <% end %>
+    </nav>
+  <% end %>
+</section>

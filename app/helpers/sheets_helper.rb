@@ -24,8 +24,21 @@ module SheetsHelper
       query: params[:query],
       insurance: params[:insurance],
       status: params[:status],
+      needs_call: params[:needs_call],
       sort: params[:sort],
-      direction: params[:direction]
+      direction: params[:direction],
+      limit: params[:limit],
+      page: params[:page]
+    }.merge(extra).compact_blank
+  end
+
+  def checkup_filter_params(extra = {})
+    {
+      query: params[:query],
+      needs_call: params[:needs_call],
+      status: params[:status],
+      limit: params[:limit],
+      page: params[:page]
     }.merge(extra).compact_blank
   end
 

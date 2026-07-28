@@ -54,7 +54,66 @@ class SheetsController < ApplicationController
     redirect_to sheets_path, alert: "Could not load document: #{e.message}"
   end
 
+  def checkup_report
+    if demo_mode?
+      redirect_to sheets_path, alert: "Checkup bot requires Google sign-in."
+      return
+    end
+
+    prepare_checkup_form
+    @run = current_user.checkup_runs.recent_first.first
+    paginate_checkup_results
+  rescue Google::Apis::AuthorizationError, Signet::AuthorizationError
+    redirect_to root_path, alert: "Google authorization expired. Please sign in again."
+  rescue Google::Apis::ClientError, Google::Apis::ServerError => e
+    redirect_to sheets_path, alert: "Could not load sheet data: #{e.message}"
+  end
+
+  def run_checkup_report
+    if demo_mode?
+      redirect_to sheets_path, alert: "Checkup bot requires Google sign-in."
+      return
+    end
+
+    prepare_checkup_form
+    limit = [[@limit.to_i, 1].max, Google::CheckupReportService::MAX_LIMIT].min
+    clients = @eligible_clients.first(limit).map { |row| row.slice("clients", "dol") }
+
+    if current_user.checkup_runs.where(status: %w[pending running]).exists?
+      redirect_to checkup_report_sheets_path, alert: "A checkup bot run is already in progress."
+      return
+    end
+
+    run = current_user.checkup_runs.create!(
+      status: "pending",
+      limit_count: limit,
+      total: clients.size,
+      query: params[:query],
+      clients_payload: clients
+    )
+
+    CheckupReportJob.perform_later(run.id)
+
+    redirect_to checkup_report_sheets_path(
+      query: params[:query],
+      limit: limit,
+      needs_call: params[:needs_call],
+      status: params[:status]
+    ), notice: "Bot started in the background — saving results to the database (run ##{run.id})."
+  rescue Google::Apis::AuthorizationError, Signet::AuthorizationError
+    redirect_to root_path, alert: "Google authorization expired. Please sign in again."
+  rescue Google::Apis::ClientError, Google::Apis::ServerError, StandardError => e
+    redirect_to checkup_report_sheets_path, alert: "Checkup bot failed: #{e.message}"
+  end
+
   private
+
+  def prepare_checkup_form
+    service = roster_service
+    @eligible_clients = service.filter_users(query: params[:query]).reverse
+    @eligible_count = @eligible_clients.size
+    @limit = params[:limit].presence || Google::CheckupReportService::DEFAULT_LIMIT
+  end
 
   def roster_service
     @roster_service ||= if demo_mode?
@@ -87,5 +146,27 @@ class SheetsController < ApplicationController
 
     start_index = (@page - 1) * PER_PAGE
     @users = @filtered_users.slice(start_index, PER_PAGE) || []
+  end
+
+  def paginate_checkup_results
+    @results = []
+    @results_total = 0
+    @page = 1
+    @total_pages = 1
+    @per_page = PER_PAGE
+    return unless @run
+
+    scope = @run.checkup_results.order(id: :desc)
+    scope = scope.where(needs_to_call: true) if params[:needs_call] == "yes"
+    scope = scope.where(needs_to_call: false) if params[:needs_call] == "no"
+    scope = scope.where(status: params[:status]) if %w[found not_found].include?(params[:status])
+
+    @results_total = scope.count
+    @page = params[:page].to_i
+    @page = 1 if @page < 1
+    @total_pages = [(@results_total.to_f / @per_page).ceil, 1].max
+    @page = @total_pages if @page > @total_pages && @results_total.positive?
+
+    @results = scope.offset((@page - 1) * @per_page).limit(@per_page)
   end
 end

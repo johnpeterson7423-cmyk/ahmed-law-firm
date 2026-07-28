@@ -10,6 +10,8 @@ Rails.application.routes.draw do
   resources :sheets, only: [:index] do
     collection do
       get :document
+      get :checkup_report
+      post :run_checkup_report
     end
   end
 end
