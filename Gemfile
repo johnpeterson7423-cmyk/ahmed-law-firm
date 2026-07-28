@@ -61,6 +61,6 @@ gem "google-apis-sheets_v4"
 gem "google-apis-drive_v3"
 gem "googleauth"
 
-gem "roo", "~> 2.10"
+gem "roo", "~> 3.0"
 # roo requires csv but doesn't declare it; Ruby 3.4 dropped csv from default gems.
 gem "csv"
